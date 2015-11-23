@@ -8,7 +8,7 @@ The code presented here is a demonstration of the implementation of the VADS Pay
 ## Contents
 This code is divided in three parts:
 * payzen.form.example.php, the main file, entry point of the VADS payment process
-* payzen.form.ipn.example.com, a minimal implementation of the IPN callback, the second step in the VADS payment process
+* payzen.form.ipn.example.php, a minimal implementation of the IPN callback, the second step in the VADS payment process
 * payzenFormToolBox.php, the core file, defining an utility class encapsulating all the PayZen logics of this example
 
 
