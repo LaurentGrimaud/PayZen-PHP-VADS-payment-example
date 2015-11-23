@@ -1,5 +1,3 @@
-# PayZen-PHP-SOAP-V5-createPayment-example
-Example of PHP code using [PayZen](https://payzen.eu/) SOAP V5 webservices - createPayment request
 # PayZen-PHP-VADS-payment-example
 
 ## Introduction
