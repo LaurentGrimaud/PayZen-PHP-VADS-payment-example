@@ -2,7 +2,7 @@
 /*
  * PayZen VADS payment example
  *
- * @version 0.3
+ * @version 0.4
  *
  */
 require "payzenFormToolbox.php";
@@ -12,11 +12,31 @@ $toolbox = new payzenFormToolbox(
      '[***CHANGE-ME***]'          // shopId XXX
    , '[***CHANGE-ME***]'          // certificate, TEST-version XXX
    , '[***CHANGE-ME***]'          // certificate, PRODUCTION-version XXX
-   , 'http://[***CHANGE-ME***]'   // The IPN URL PayZen must use to notify you
-   , 'http://[***CHANGE-ME***]'   // The return URL PayZen must use to send you customers back
    , 'TEST'                       // mode toggle ("TEST" or "PRODUCTION")
-   );
+   , 'http://[***CHANGE-ME***]'   // The IPN URL PayZen must use XXX
+   , 'http://[***CHANGE-ME***]'   // The return URL PayZen must use XXX
+  );
 
+/*
+ * Toolbox can accept logging callback method
+ * Use it if you need special logging, like database logging
+ * or if you need to hook the toolbox to your own loggin process
+ *
+*/
+ $toolbox->setLogFunction(function($level, $message, $data = null){
+  error_log(sprintf(
+        ">>>\nLOG TIME: %s\nLOG LEVEL: %s\nLOG MESSAGE: %s\nLOG DATA:\n %s\n<<<\n"
+      , date('r')
+      , $level
+      , $message
+     , print_r($data, true)
+    )
+  );
+  });
+
+// Sets the toolbox log level to 'NOTICE', to gain maximun feedback
+// about the request process. Comment out this line to get rid of logs
+$toolbox->setNoticeLogLevel();
 
 // Generation of the data being transmitted to PayZen by HTML form
 $formData = $toolbox->getFormData(
@@ -36,9 +56,6 @@ $formData = $toolbox->getFormData(
   </style>
  </head>
  <body>
-  <pre>
-  <?php echo print_r($formData, true) ?>
-  </pre>
   <form action="<?php echo $formData['form']['action'] ?>"
         method="<?php echo $formData['form']['method'] ?>"
         enctype="<?php echo $formData['form']['enctype'] ?>"

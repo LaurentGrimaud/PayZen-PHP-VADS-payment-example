@@ -3,12 +3,21 @@
 /*
  * Utility class easing PayZen form payments
  *
- * @version 0.3
+ * @version 0.4
  *
  */
 
 
 class payzenFormToolbox {
+ /**************** CLASS CONSTANTS **************/
+ // The toolbox handles 4 log levels
+ const NO_LOG  = 0; // Default log level - No logs
+ const ERROR   = 1; // Narrower log level - Only errors
+ const WARNING = 2; // Intemediate log level - Warning and errors
+ const NOTICE  = 3; // Wider log level - All logs
+
+
+/**************** CLASS PROPERTIES **************/
  public $platForm = [
   'url' => 'https://secure.payzen.eu/vads-payment/' // The URL of the PayZen plat-form
  ];
@@ -19,17 +28,25 @@ class payzenFormToolbox {
  // Container for shop user's account informations
  public $shopPlatForm;
 
+ // Callback method used by logging mechanism
+ public $logMethod;
+
+ // Toolbox log level. The log entries with greater level will be ignored 
+ public $logLevel;
+
+
+ /**************** CLASS METHODS - PUBLIC **************/
  /*
   * Constructor, stores the PayZen user's account informations
   *
   * @param $siteId string, the account site id as provided by Payzen
   * @param $certTest string, certificate, test-version, as provided by PayZen
   * @param $certProd string, certificate, production-version, as provided by PayZen
+  * @param $mode string ("TEST" or "PRODUCTION"), the PayZen mode to operate
   * @param $ipnUrl string, the URL PayZen will notify the payments to
   * @param $backUrl string, the URL PayZen will use to send the customer back after payment
-  * @param $mode string ("TEST" or "PRODUCTION"), the PayZen mode to operate
   */
- public function __construct($siteId, $certTest, $certProd, $ipnUrl, $backUrl, $ctxMode){
+ public function __construct($siteId, $certTest, $certProd, $ctxMode, $ipnUrl, $backUrl){
   $this->account = [
      'vadsSiteId' => $siteId 
     ,'cert'   => [
@@ -40,6 +57,13 @@ class payzenFormToolbox {
   ];
   $this->shopPlatForm['ipnUrl']  = $ipnUrl;
   $this->shopPlatForm['backUrl'] = $backUrl;
+
+  $this->logLevel = self::NO_LOG; // No logging by default
+
+  // self::defaultLog is the default logging method
+  $this->logMethod = function($level, $message, $data = null){
+   $this->defaultLog($level, $message, $data);
+  };
  }
 
 
@@ -69,6 +93,7 @@ class payzenFormToolbox {
     , "vads_payment_config"  => "SINGLE"
     , "vads_capture_delay"   => "0"
     , "vads_validation_mode" => "0"
+    , "vads_url_check"       => $this->shopPlatForm['ipnUrl']
   ];
 
   $form_data['signature'] = $this->sign($form_data);
@@ -85,18 +110,39 @@ class payzenFormToolbox {
   * @throws Exception if the authenticity data can't be established
   */
  public function checkIpnRequest($data) {
+  $this->logNotice('IPN request received with data: '.json_encode($data));
   $vads_data = $this->filterVadsData($data);
   $signature_check = $this->sign($vads_data);
   if(@$data['signature'] != $signature_check){
    throw new Exception('Signature mismatch');
   }
+  $this->logNotice('IPN request authenticated: signature is correct');
+ }
+
+ /**
+  * Utility function, filters out the useless fields
+  *  for PayZen signature
+  *
+  * @param $data Array, array of data received from PayZen
+  *         (typically $_POST)
+  *
+  * @return Array, the data filtered
+  */
+ public function filterVadsData($data) {
+  $res = [];
+  if($data) {
+   foreach($data as $field => $value) {
+    substr($field, 0, 5) == 'vads_' && $res[$field] = $value;
+   }
+  }
+  return $res;
  }
 
  /**
   * Utility function, builds and returns the signature string of the data
   *  being transmitted to the PayZen plat-form
   *
-  * @param $vads_form Array, array of datat to being signed
+  * @param $vads_form Array, array of data being signed
   *
   * @return String, the signature
   */
@@ -148,6 +194,7 @@ class payzenFormToolbox {
   *
   */
  public function getFormData($transId, $amount, $currency) {
+  $this->logNotice("Building form data for: transId $transId, amount $amount and currency $currency.");
   return [
      "form" => [
 	"action"         => $this->platForm['url']
@@ -157,6 +204,114 @@ class payzenFormToolbox {
    ] 
    , "fields" => $this->getFormFields($this->account['vadsSiteId'], $transId, $amount, $currency)
   ];
+ }
+
+
+ /*
+  * Setter to allow custom logging
+  *
+  * @param $f callable, callback method that must accept
+  * 3 arguments, just like self::defaultLog()
+  */
+ public function setLogFunction(Callable $f) {
+  $this->logMethod = $f;
+ }
+
+
+ /*
+  * Customisation method. Sets the toolbox log level to NOTICE one
+  * This is the wider level, every log entry will be processed
+  */
+ public function setNoticeLogLevel() {
+  $this->logLevel = self::NOTICE;
+ }
+
+
+ /*
+  * Customisation method. Sets the toolbox log level to WARNING one
+  * Only the ERROR and WARNING messages will be processed
+  */
+ public function setWarningLogLevel() {
+  $this->logLevel = self::WARNING;
+ }
+
+ /*
+  * Customisation method. Sets the toolbox log level to WARNING one
+  * Only the ERROR messages will be processed
+  */
+ public function setErrorLogLevel() {
+  $this->logLevel = self::ERROR;
+ }
+
+ /*
+  * Utility method. Sends a NOTICE log entry to the logging mechanism
+  *  if the toolbox log level permits it.
+  *
+  * @param $message string, main log information, as a sentence
+  * @param $data mixed, additionnal informations
+  */
+ public function logNotice($message, $data = null) {
+  if($this->logLevel >= self::NOTICE)
+   $this->_log('NOTICE', $message, $data);
+ }
+
+ /*
+  * Utility method. Sends a WARNING log entry to the logging mechanism
+  *  if the toolbox log level permits it.
+  *
+  * @param $message string, main log information, as a sentence
+  * @param $data mixed, additionnal informations
+  */
+ public function logWarning($message, $data = null) {
+  if($this->logLevel >= self::WARNING)
+   $this->_log('WARNING', $message, $data);
+ }
+
+ /*
+  * Utility method. Sends an ERROR log entry to the logging mechanism
+  *  if the toolbox log level permits it.
+  *
+  * @param $message string, main log information, as a sentence
+  * @param $data mixed, additionnal informations
+  */
+ public function logError($message, $data = null) {
+  if($this->logLevel >= self::ERROR)
+   $this->_log('ERROR', $message, $data);
+ }
+
+
+ /*************** CLASS METHODS - PROTECTED *************/
+ /*
+  * Utility method, formats and prints log informations
+  * This is the default logging method, is no custom one
+  * has been previously provided.
+  *
+  * @param $level string, severity level of the log informations
+  * @param $message string, main log information, as a sentence
+  * @param $data mixed, additionnal informations
+  */
+ protected function defaultLog($level, $message, $data = null) {
+  error_log(sprintf("[%s][%s] %s %s\n",
+      date('Y-m-d H:s:i')
+    , $level
+    , $message
+    , $data ? "\n".print_r($data, true) : ''
+    )
+    );
+ }
+
+ /*
+  * Utility method, main passing point for log messages
+  * Relays the log entry to the configured log method stored
+  * in self::logMethod
+  *
+  * @param $level string, one of NOTICE, WARNING, ERROR
+  * @param $message string, main log information, as a sentence
+  * @param $data mixed, additionnal informations, as array or object
+  */
+ protected function _log($level, $message, $data = null){
+  $log = $this->logMethod;
+  $log($level, $message, $data);
  }
 
 }
