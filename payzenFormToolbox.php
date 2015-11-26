@@ -3,7 +3,7 @@
 /*
  * Utility class easing PayZen form payments
  *
- * @version 0.4
+ * @version 0.6
  *
  */
 
@@ -26,7 +26,7 @@ class payzenFormToolbox {
  public $account;
 
  // Container for shop user's account informations
- public $shopPlatForm;
+ public $shopPlatForm = [];
 
  // Callback method used by logging mechanism
  public $logMethod;
@@ -44,9 +44,9 @@ class payzenFormToolbox {
   * @param $certProd string, certificate, production-version, as provided by PayZen
   * @param $mode string ("TEST" or "PRODUCTION"), the PayZen mode to operate
   * @param $ipnUrl string, the URL PayZen will notify the payments to
-  * @param $backUrl string, the URL PayZen will use to send the customer back after payment
+  * @param $returnUrl string, the URL PayZen will use to send the customer back after payment
   */
- public function __construct($siteId, $certTest, $certProd, $ctxMode, $ipnUrl, $backUrl){
+ public function __construct($siteId, $certTest, $certProd, $ctxMode){
   $this->account = [
      'vadsSiteId' => $siteId 
     ,'cert'   => [
@@ -55,8 +55,6 @@ class payzenFormToolbox {
     ]
     , 'ctxMode'   => $ctxMode
   ];
-  $this->shopPlatForm['ipnUrl']  = $ipnUrl;
-  $this->shopPlatForm['backUrl'] = $backUrl;
 
   $this->logLevel = self::NO_LOG; // No logging by default
 
@@ -66,6 +64,13 @@ class payzenFormToolbox {
   };
  }
 
+ public function setIpnUrl($ipnUrl) {
+  $this->shopPlatForm['ipnUrl']  = $ipnUrl;
+ }
+
+ public function setReturnUrl($returnUrl) {
+  $this->shopPlatForm['returnUrl'] = $returnUrl;
+ }
 
 
  /**
@@ -93,8 +98,13 @@ class payzenFormToolbox {
     , "vads_payment_config"  => "SINGLE"
     , "vads_capture_delay"   => "0"
     , "vads_validation_mode" => "0"
-    , "vads_url_check"       => $this->shopPlatForm['ipnUrl']
   ];
+
+  if(isset($this->shopPlatForm['ipnUrl']))
+   $form_data['vads_url_check'] = $this->shopPlatForm['ipnUrl'];
+
+  if(isset($this->shopPlatForm['returnUrl']))
+   $form_data['vads_url_return'] = $this->shopPlatForm['returnUrl'];
 
   $form_data['signature'] = $this->sign($form_data);
   return $form_data;

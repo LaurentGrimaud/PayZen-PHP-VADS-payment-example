@@ -2,45 +2,21 @@
 /*
  * PayZen VADS payment example
  *
- * @version 0.4
+ * @version 0.6
  *
  */
-require "payzenFormToolbox.php";
 
-// Toolbox initialisation, using PayZen account informations
-$toolbox = new payzenFormToolbox(
-     '[***CHANGE-ME***]'          // shopId XXX
-   , '[***CHANGE-ME***]'          // certificate, TEST-version XXX
-   , '[***CHANGE-ME***]'          // certificate, PRODUCTION-version XXX
-   , 'TEST'                       // mode toggle ("TEST" or "PRODUCTION")
-   , 'http://[***CHANGE-ME***]'   // The IPN URL PayZen must use XXX
-   , 'http://[***CHANGE-ME***]'   // The return URL PayZen must use XXX
-  );
+$toolbox = require "payzen.bootstrap.php";
 
-/*
- * Toolbox can accept logging callback method
- * Use it if you need special logging, like database logging
- * or if you need to hook the toolbox to your own loggin process
- *
-*/
- $toolbox->setLogFunction(function($level, $message, $data = null){
-  error_log(sprintf(
-        ">>>\nLOG TIME: %s\nLOG LEVEL: %s\nLOG MESSAGE: %s\nLOG DATA:\n %s\n<<<\n"
-      , date('r')
-      , $level
-      , $message
-     , print_r($data, true)
-    )
-  );
-  });
+// One can overrides the IPN url configured in the PayZen back-office
+//$toolbox->setIpnUrl('[***CHANGE-ME***]');
 
-// Sets the toolbox log level to 'NOTICE', to gain maximun feedback
-// about the request process. Comment out this line to get rid of logs
-$toolbox->setNoticeLogLevel();
+// One can overrides the return url configured in the PayZen back-office
+//$toolbox->setReturnUrl('http://[***CHANGE-ME***]');
 
 // Generation of the data being transmitted to PayZen by HTML form
 $formData = $toolbox->getFormData(
-  substr(time(), -6)     // your order identifier - Change-it to reflect your needs
+  substr(time(), -6)     // a daily-unique transaction id - Change-it to reflect your needs
  , '4300'                // payment amount - Change-it to reflect your needs
  , '978'                 // payment currency code - Change-it to reflect your needs
 );
@@ -51,7 +27,7 @@ $formData = $toolbox->getFormData(
  <head>
   <title>PayZen Form Payment Example</title>
   <style>
-   label {font-weight: bold;width:170px;display:inline-block;text-align:right;padding:2 10 2 0;}
+   label {font-weight: bold;width:170px;display:inline-block;text-align:right;padding:2px 10px 2px 0px;}
    input[type=text] {width:350px;}
   </style>
  </head>
