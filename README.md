@@ -6,7 +6,7 @@ The code presented here is a demonstration of the implementation of the VADS Pay
 
 
 ## Contents
-This code is divided in four file:
+This code is divided in four files:
 * payzen.bootstrap.php, a centralized configuration and initialisation file
 * payzen.form.example.php, the main file, entry point of the VADS payment process
 * payzen.form.ipn.example.php, a minimal implementation of the IPN callback, the second step in the VADS payment process
